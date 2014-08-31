@@ -1,4 +1,5 @@
 #include "stm32f0xx.h"
+#include "cmsis_os.h"
 #include <string.h>
 
 /**
@@ -15,6 +16,8 @@ __attribute__( ( always_inline ) ) __STATIC_INLINE void MX_GPIO_Init(void);
 __attribute__( ( always_inline ) ) __STATIC_INLINE void MX_UART1_Init(void);
 
 static void Console_log(char *message);
+
+static void StartThread(void const * argument);
 
 int main(void) {
 
@@ -33,11 +36,11 @@ int main(void) {
     // Init UART bus
     MX_UART1_Init();
     Console_log("\r\nUART1 initialized");
-    
-    while(1) {
-      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-      HAL_Delay(500);
-    }
+
+    Console_log("Start kernel");
+    osThreadDef(User_thread, StartThread, osPriorityNormal, 0, configMINIMAL_STACK_SIZE);
+    osThreadCreate(osThread(User_thread), NULL);
+    osKernelStart(NULL, NULL);
 
     return 0;
 }
@@ -151,6 +154,15 @@ static void Console_log(char *message) {
         // do nothing
     }
     UartReady = RESET;
+}
+
+static void StartThread(void const * argument) {
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
+
+    for(;;) {
+        vTaskDelay(200);
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+    }
 }
 
 /**
